@@ -240,6 +240,8 @@ let primaryViews = [];
 let navView;
 let soundManagerWindow = null;
 let notesWindow = null;
+// Screenshot handling fallback flag
+let pendingScreenshotHandled = false;
 
 // Default world - will be overridden by saved settings
 const defaultWorldUrl = 'http://play.rn04.com';
@@ -448,10 +450,32 @@ app.whenReady().then(() => {
   });
 
   ipcMain.on('capture-screenshot', () => {
-    // Request screenshot from the main game view
+    // Request screenshot from the main game view (renderer-first approach)
     const mainPV = primaryViews.find(p => p.id === currentTab);
+    pendingScreenshotHandled = false;
     if (mainPV && mainPV.view.webContents) {
-      mainPV.view.webContents.send('request-screenshot');
+      try {
+        mainPV.view.webContents.send('request-screenshot');
+      } catch (e) {
+        // ignore
+      }
+
+      // If renderer doesn't respond within 600ms, fall back to capturePage()
+      setTimeout(async () => {
+        if (pendingScreenshotHandled) return; // already saved by renderer
+        try {
+          const image = await mainPV.view.webContents.capturePage();
+          const buffer = image.toPNG();
+          const folder = getScreenshotFolder();
+          const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+          const filename = `screenshot-${timestamp}.png`;
+          const filepath = path.join(folder, filename);
+          fs.writeFileSync(filepath, buffer);
+          log.info('Screenshot saved via fallback capturePage():', filepath);
+        } catch (err) {
+          log.error('Fallback capturePage failed:', err);
+        }
+      }, 600);
     }
   });
 
@@ -497,6 +521,12 @@ app.whenReady().then(() => {
   // Register saved screenshot keybind on startup
   if (appSettings.screenshotKeybind) {
     registerScreenshotKeybind(appSettings.screenshotKeybind);
+  } else {
+    // Register a sensible default keybind so users can capture immediately
+    const defaultAccel = 'F12';
+    appSettings.screenshotKeybind = defaultAccel;
+    saveSettingsDebounced();
+    registerScreenshotKeybind(defaultAccel);
   }
 
   // IPC handler to update screenshot keybind
@@ -668,12 +698,11 @@ app.whenReady().then(() => {
   // Handle screenshot data from renderer
   ipcMain.on('save-screenshot', (event, dataUrl) => {
     if (!dataUrl) return;
-    
+    pendingScreenshotHandled = true;
     const folder = getScreenshotFolder();
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const filename = `screenshot-${timestamp}.png`;
     const filepath = path.join(folder, filename);
-    
     // Convert data URL to buffer and save
     const base64Data = dataUrl.replace(/^data:image\/png;base64,/, '');
     try {
