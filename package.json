@@ -1,0 +1,67 @@
+{
+  "name": "rn04-launcher",
+  "version": "1.0.0",
+  "author": "Akg",
+  "description": "RN04 Launcher - by Akg",
+  "license": "GNU General Public License v3.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Razgals/RN04-Launcher.git"
+  },
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron-forge start",
+    "package": "electron-forge package",
+    "make": "electron-forge make",
+    "build:win": "electron-builder --win --ia32 --x64",
+    "build:linux": "electron-builder --linux --ia32 --x64",
+    "dist": "electron-builder --dir",
+    "publish": "electron-forge publish",
+    "lint": "echo \"No linting configured\""
+  },
+  "dependencies": {
+    "electron-log": "^4.4.8",
+    "electron-squirrel-startup": "^1.0.1",
+    "electron-updater": "^6.7.3",
+    "electron-window-state": "^5.0.3"
+  },
+  "devDependencies": {
+    "@electron-forge/cli": "^7.6.0",
+    "@electron-forge/maker-squirrel": "^7.6.0",
+    "@electron-forge/maker-zip": "^7.6.0",
+    "@electron-forge/plugin-auto-unpack-natives": "^7.6.0",
+    "@electron-forge/plugin-fuses": "^7.6.0",
+    "@electron-forge/publisher-github": "^7.6.0",
+    "@electron/fuses": "^1.8.0",
+    "electron": "^40.2.1",
+    "electron-builder": "^26.4.0"
+  },
+  "overrides": {
+    "tar": "7.5.7",
+    "tmp": "0.2.5"
+  },
+  "build": {
+    "appId": "com.rn04.launcher",
+    "productName": "RN04 Launcher",
+    "files": [
+      "**/*"
+    ],
+    "publish": [
+      {
+        "provider": "generic",
+        "url": "https://github.com/Razgals/RN04-Launcher/releases"
+      }
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "zip"
+      ],
+      "icon": "src/assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
+}
