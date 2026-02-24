@@ -1,5 +1,15 @@
 const { app, BrowserWindow, WebContentsView, ipcMain, dialog, shell, globalShortcut } = require('electron');
+const mousecam = require('./native-mousecam');
 const log = require('electron-log');
+const instanceSuffix = `-instance-${process.pid}`;
+try {
+  const baseUserData = app.getPath && app.getPath('userData') ? app.getPath('userData') : null;
+  if (baseUserData) {
+    app.setPath('userData', baseUserData + instanceSuffix);
+  }
+} catch (e) {
+  // If app paths aren't available yet, ignore — it's non-fatal.
+}
 const path = require('path');
 const fs = require('fs');
 const version = require('../package.json').version;
@@ -57,6 +67,7 @@ let navPanelPrevX = null; // Store previous X position if shifted for panel
 // Place this after navView is initialized (after app.whenReady)
 
 // Configure logging
+log.transports.file.resolvePath = () => path.join(app.getPath('userData'), 'logs', 'main.log');
 log.transports.file.level = 'info';
 
 // Version check URL (raw GitHub - no rate limits, with cache busting)
@@ -196,7 +207,8 @@ let backgroundTimerStartTime = null; // Timestamp when timer started for accurat
 // App title configuration
 const appName = `RN04 Launcher`;
 // Window title timer display (kept for backward compatibility with timer overlay)
-const baseWindowTitle = `${appName} - by Akg`;
+// Include the packaged version so the title shows e.g. "RN04 Launcher v1.2.3 by Akg"
+const baseWindowTitle = `${appName} v${version} by Akg`;
 
 // Real-time latency tracking (ms)
 let latestLatency = null;
@@ -780,6 +792,11 @@ app.whenReady().then(() => {
   mainWindow.webContents.send('update-tab-title', 'main', startWorldTitle);
 
   updateBounds();
+
+  // Start mousecam — replicates mousecam.ahk (middle mouse → arrow keys)
+  // Uses PowerShell/Win32 keybd_event — no native Node modules needed.
+  mousecam.start();
+
   // Start latency polling once window is ready. This measures response time to the default world URL
   function refreshTitle() {
     if (!mainWindow || mainWindow.isDestroyed()) return;
@@ -793,7 +810,7 @@ app.whenReady().then(() => {
       return;
     }
     const latencyText = (latestLatency != null) ? `${latestLatency} ms` : '— ms';
-    mainWindow.setTitle(`${appName} | ${latencyText} - by Akg`);
+    mainWindow.setTitle(`${appName} v${version} by Akg | ${latencyText}`);
   }
 
   async function updateLatencyOnce() {
@@ -1787,6 +1804,7 @@ app.on('window-all-closed', () => {
 });
 
 app.on('will-quit', () => {
+  mousecam.destroy();
   // Unregister all global shortcuts
   globalShortcut.unregisterAll();
 });
