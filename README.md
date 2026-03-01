@@ -2,7 +2,7 @@
 
 A small, focused launcher for RN04 - built by Akg.
 
-This project is a lightweight Electron-based launcher that embeds the RN04 web client and a few handy tools (Notes, Capture, World Map, Quest & Skill Guides). It started as a port of LostKit-Electron and was narrowed down to the features we actually use.
+This project is a lightweight Electron-based launcher that embeds the RN04 web client and a few handy tools (Notes, Capture, World Map, RN04 MArket, Quest & Skill Guides). It started as a port of LostKit-Electron and was narrowed down to the features we actually use.
 
 Quick highlights
 - Loads the RN04 game at startup (http://play.rn04.com).
