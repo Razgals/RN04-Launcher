@@ -130,7 +130,7 @@ let appSettings = {
   zoomFactor: 1,
   tabZoom: {}, // { url: zoomFactor }
   externalZoom: {}, // { url: zoomFactor }
-  lastWorld: { url: 'http://play.rn04.com', title: 'RN04' },
+  lastWorld: { url: 'https://play.rn04.rs/', title: 'RN04' },
   soundManagerWindow: { width: 450, height: 500 },
   notesWindow: { width: 500, height: 600 },
   screenshotFolder: '', // Path to custom screenshot folder
@@ -256,7 +256,7 @@ let notesWindow = null;
 let pendingScreenshotHandled = false;
 
 // Default world - will be overridden by saved settings
-const defaultWorldUrl = 'http://play.rn04.com';
+const defaultWorldUrl = 'https://play.rn04.rs/';
 const defaultWorldTitle = 'RN04';
 let tabs = [{ id: 'main', url: defaultWorldUrl, title: defaultWorldTitle }];
 let tabByUrl = new Map([[defaultWorldUrl, 'main']]);
