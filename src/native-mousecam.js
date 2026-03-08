@@ -4,10 +4,12 @@
  * Replicates mousecam.ahk without AutoHotkey.
  *
  * Uses PowerShell + Win32 SetWindowsHookEx (WH_MOUSE_LL) to:
- *   1. Intercept middle mouse button at the OS level and SWALLOW it
- *      so it never reaches Electron or the game as a click.
+ *   1. Track middle mouse button WITHOUT swallowing it — so middle-click
+ *      still works normally (e.g. closing browser tabs).
  *   2. While middle is held, send arrow keys via keybd_event based
- *      on cursor offset from anchor — identical to the AHK script.
+ *      on cursor offset from anchor. Mouse moves pass through freely.
+ *
+ * Windows only. start()/stop()/destroy() are safe to call at any time.
  */
 
 const { spawn } = require('child_process');
@@ -26,13 +28,11 @@ using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
 public class MouseCam {
-    // Hook constants
     const int WH_MOUSE_LL    = 14;
     const int WM_MBUTTONDOWN = 0x0207;
     const int WM_MBUTTONUP   = 0x0208;
     const int WM_MOUSEMOVE   = 0x0200;
 
-    // Key constants
     const byte VK_LEFT  = 0x25;
     const byte VK_UP    = 0x26;
     const byte VK_RIGHT = 0x27;
@@ -58,12 +58,10 @@ public class MouseCam {
     [DllImport("kernel32.dll")] static extern IntPtr GetModuleHandle(string lpModuleName);
 
     static IntPtr hookId = IntPtr.Zero;
-    static LowLevelMouseProc hookProc; // keep reference to prevent GC
+    static LowLevelMouseProc hookProc;
 
     static bool middleDown = false;
     static int anchorX, anchorY;
-
-    // Track key states to avoid repeat sends
     static bool lDown, rDown, uDown, dDown;
 
     static void Key(byte vk, bool press, ref bool state) {
@@ -88,25 +86,23 @@ public class MouseCam {
             middleDown = true;
             anchorX = data.pt.X;
             anchorY = data.pt.Y;
-            // Return 1 to SWALLOW the event — game never sees the click
-            return (IntPtr)1;
+            // pass through — tabs/clicks still work
         }
 
         if (msg == WM_MBUTTONUP) {
             middleDown = false;
             ReleaseAll();
-            // Swallow the up event too
-            return (IntPtr)1;
+            // pass through
         }
 
         if (msg == WM_MOUSEMOVE && middleDown) {
             int dx = data.pt.X - anchorX;
             int dy = data.pt.Y - anchorY;
-            // AHK logic: x>anchor->Left, x<anchor->Right, y<anchor->Down, y>anchor->Up
             Key(VK_LEFT,  dx > 0, ref lDown);
             Key(VK_RIGHT, dx < 0, ref rDown);
             Key(VK_DOWN,  dy < 0, ref dDown);
             Key(VK_UP,    dy > 0, ref uDown);
+            // pass through — cursor moves freely
         }
 
         return CallNextHookEx(hookId, nCode, wParam, lParam);
@@ -118,10 +114,7 @@ public class MouseCam {
         using (var module  = process.MainModule) {
             hookId = SetWindowsHookEx(WH_MOUSE_LL, hookProc, GetModuleHandle(module.ModuleName), 0);
         }
-
-        // Standard Windows message loop — required for low-level hooks to fire
         Application.Run();
-
         UnhookWindowsHookEx(hookId);
         ReleaseAll();
     }
@@ -140,7 +133,7 @@ function start() {
   }
 
   try {
-    scriptPath = path.join(os.tmpdir(), 'rn04-mousecam.ps1');
+    scriptPath = path.join(os.tmpdir(), 'lostkit-mousecam.ps1');
     fs.writeFileSync(scriptPath, PS_SCRIPT, 'utf8');
 
     psProcess = spawn('powershell.exe', [
@@ -164,7 +157,7 @@ function start() {
       psProcess = null;
     });
 
-    console.log('mousecam: started (WH_MOUSE_LL hook, pid', psProcess.pid + ')');
+    console.log('mousecam: started (pid', psProcess.pid + ')');
   } catch (e) {
     console.error('mousecam: failed to start -', e.message);
     psProcess = null;

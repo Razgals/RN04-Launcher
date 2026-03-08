@@ -1,7 +1,10 @@
 {
   "name": "rn04-launcher",
-  "version": "1.2.0",
-  "author": "Akg",
+  "version": "1.3.0",
+  "author": {
+    "name": "Akg",
+    "email": "akg@rn04.com"
+  },
   "description": "RN04 Launcher - by Akg",
   "license": "GNU General Public License v3.0",
   "repository": {
@@ -13,8 +16,8 @@
     "start": "electron-forge start",
     "package": "electron-forge package",
     "make": "electron-forge make",
-    "build:win": "electron-builder --win --ia32 --x64",
-    "build:linux": "electron-builder --linux --ia32 --x64",
+    "build:win": "electron-builder --win --x64",
+    "build:linux": "electron-builder --linux --x64",
     "dist": "electron-builder --dir",
     "publish": "electron-forge publish",
     "lint": "echo \"No linting configured\""
@@ -42,26 +45,36 @@
   },
   "build": {
     "appId": "com.rn04.launcher",
-    "productName": "RN04 Launcher",
+    "productName": "RN04-Launcher",
     "files": [
       "**/*"
     ],
     "publish": [
       {
-        "provider": "generic",
-        "url": "https://github.com/Razgals/RN04-Launcher/releases"
+        "provider": "github",
+        "owner": "Razgals",
+        "repo": "RN04-Launcher",
+        "releaseType": "release"
       }
     ],
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "icon": "src/assets/icons",
+      "category": "Game"
+    },
     "win": {
       "target": [
-        "nsis",
-        "zip"
+        "nsis"
       ],
       "icon": "src/assets/icon.ico"
     },
     "nsis": {
       "oneClick": false,
-      "allowToChangeInstallationDirectory": true
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "${productName}-Setup-${version}.${ext}"
     }
   }
 }

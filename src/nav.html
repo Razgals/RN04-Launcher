@@ -37,6 +37,10 @@
             <img src="assets/worldmap.png" class="nav-icon">
             <span>World Map</span><span class="open-external" onclick="event.stopPropagation(); openExternal(this.parentElement.getAttribute('data-url'), this.parentElement.getAttribute('data-title'))"><img src="assets/external-link.svg" alt="" class="icon" /></span>
         </div>
+        <div class="nav-button link" data-url='https://highscores.rn04.rs' data-title="Highscores" onclick="addTab('https://highscores.rn04.rs', 'Highscores', 'assets/hiscores.png')">
+            <img src="assets/hiscores.png" class="nav-icon">
+            <span>Highscores</span><span class="open-external" onclick="event.stopPropagation(); openExternal(this.parentElement.getAttribute('data-url'), this.parentElement.getAttribute('data-title'))"><img src="assets/external-link.svg" alt="" class="icon" /></span>
+        </div>
     </div>
     <script>
         const { ipcRenderer } = require('electron');

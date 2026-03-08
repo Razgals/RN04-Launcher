@@ -134,7 +134,8 @@ let appSettings = {
   soundManagerWindow: { width: 450, height: 500 },
   notesWindow: { width: 500, height: 600 },
   screenshotFolder: '', // Path to custom screenshot folder
-  screenshotKeybind: '' // Global keybind for screenshot (e.g. 'F12', 'PrintScreen', 'CommandOrControl+Shift+S')
+  screenshotKeybind: '', // Global keybind for screenshot (e.g. 'F12', 'PrintScreen', 'CommandOrControl+Shift+S')
+  mousecamEnabled: true // Whether native mousecam (middle-mouse camera) is active
 };
 
 function loadSettings() {
@@ -599,7 +600,8 @@ app.whenReady().then(() => {
         screenshotFolder: appSettings.screenshotFolder || '',
         captureInterval: appSettings.captureInterval || 60,
         randomInterval: appSettings.randomInterval || false,
-        createAdventureFolder: appSettings.createAdventureFolder !== false
+        createAdventureFolder: appSettings.createAdventureFolder !== false,
+        mousecamEnabled: appSettings.mousecamEnabled !== false
       });
     });
   });
@@ -611,6 +613,20 @@ app.whenReady().then(() => {
     appSettings.captureInterval = settings.captureInterval;
     appSettings.randomInterval = settings.randomInterval;
     appSettings.createAdventureFolder = settings.createAdventureFolder;
+
+    // Handle mousecam toggle from settings page
+    if (typeof settings.mousecamEnabled === 'boolean') {
+      const wasEnabled = appSettings.mousecamEnabled !== false;
+      appSettings.mousecamEnabled = settings.mousecamEnabled;
+      if (settings.mousecamEnabled && !wasEnabled) {
+        mousecam.start();
+        log.info('mousecam: enabled via settings');
+      } else if (!settings.mousecamEnabled && wasEnabled) {
+        mousecam.stop();
+        log.info('mousecam: disabled via settings');
+      }
+    }
+
     saveSettings();
 
     // Update adventure capture timer
@@ -795,7 +811,30 @@ app.whenReady().then(() => {
 
   // Start mousecam — replicates mousecam.ahk (middle mouse → arrow keys)
   // Uses PowerShell/Win32 keybd_event — no native Node modules needed.
-  mousecam.start();
+  // Only start if enabled in settings (defaults to true on first launch).
+  if (appSettings.mousecamEnabled !== false) {
+    mousecam.start();
+  }
+
+  // IPC: get current mousecam enabled state
+  ipcMain.handle('get-mousecam-enabled', () => {
+    return appSettings.mousecamEnabled !== false;
+  });
+
+  // IPC: enable or disable mousecam at runtime
+  ipcMain.on('set-mousecam-enabled', (event, enabled) => {
+    const wasEnabled = appSettings.mousecamEnabled !== false;
+    appSettings.mousecamEnabled = !!enabled;
+    saveSettingsDebounced();
+
+    if (enabled && !wasEnabled) {
+      mousecam.start();
+      log.info('mousecam: enabled by user');
+    } else if (!enabled && wasEnabled) {
+      mousecam.stop();
+      log.info('mousecam: disabled by user');
+    }
+  });
 
   // Start latency polling once window is ready. This measures response time to the default world URL
   function refreshTitle() {
@@ -1435,6 +1474,23 @@ app.whenReady().then(() => {
   });
 
   // (sound manager UI removed in RN04 build)
+
+  // Handle getting sounds dir (used by settings page sound manager)
+  ipcMain.handle('get-sounds-dir', async () => {
+    const soundsDir = path.join(process.env.APPDATA || path.join(process.env.HOME || process.env.USERPROFILE, '.config'), 'RN04', 'sounds');
+    try { fs.mkdirSync(soundsDir, { recursive: true }); } catch (e) {}
+    return soundsDir;
+  });
+
+  // Test screenshot sound playback
+  ipcMain.on('test-screenshot-sound', (event, volume, soundPath) => {
+    const vol = typeof volume === 'number' ? volume : 80;
+    if (soundPath && soundPath.trim() !== '' && fs.existsSync(soundPath)) {
+      playCustomAlertSound(soundPath, vol);
+    } else {
+      playDefaultPackagedSound();
+    }
+  });
 
   // Handle getting sounds config
   ipcMain.handle('get-sounds-config', async (event) => {

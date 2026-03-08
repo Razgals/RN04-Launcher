@@ -1,5 +1,18 @@
 const { ipcRenderer } = require('electron');
 
+// Suppress middle mouse button DOM events so the game never sees them as a click.
+// The native-mousecam OS-level hook handles camera movement via arrow keys independently —
+// it doesn't need these DOM events to reach the game at all.
+// Using capture:true + stopImmediatePropagation ensures this runs before any game handler.
+['mousedown', 'mouseup', 'auxclick', 'click'].forEach(type => {
+    window.addEventListener(type, (e) => {
+        if (e.button === 1) {
+            e.stopImmediatePropagation();
+            e.preventDefault();
+        }
+    }, { capture: true });
+});
+
 // Forward wheel events (when Ctrl is held) to the main process for zoom
 window.addEventListener('wheel', (e) => {
     try {
